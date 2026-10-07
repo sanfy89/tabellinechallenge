@@ -45,6 +45,8 @@ def gestisci_numero(stato, numero, rng=random):
         _imposta_giocatori(stato, numero, eventi)
     elif fase == LIVELLI:
         _imposta_livello(stato, numero, eventi, rng)
+    elif fase in (DOMANDA, FURTO):
+        _rispondi(stato, numero, eventi, rng)
     return eventi
 
 
@@ -87,3 +89,43 @@ def _nuova_domanda(stato, rng):
     stato["ladro"] = None
     stato["non_capito"] = 0
     stato["fase"] = DOMANDA
+
+
+def _rispondi(stato, numero, eventi, rng):
+    if numero is None and stato["non_capito"] == 0:
+        stato["non_capito"] = 1
+        eventi.append({"tipo": "non_capito"})
+        return
+    x, y = stato["domanda"]
+    chi = chi_risponde(stato)
+    giusta = numero == x * y
+    stato["giocatori"][chi]["punti"] += 1 if giusta else -1
+    eventi.append({"tipo": "giusta" if giusta else "sbagliata", "giocatore": chi})
+    if not giusta and stato["fase"] == DOMANDA:
+        ladro = _ladro_possibile(stato)
+        if ladro is not None:
+            stato["fase"] = FURTO
+            stato["ladro"] = ladro
+            stato["non_capito"] = 0
+            return
+    if not giusta:
+        eventi.append({"tipo": "soluzione", "x": x, "y": y})
+    _avanza(stato, eventi, rng)
+
+
+def _ladro_possibile(stato):
+    n = len(stato["giocatori"])
+    if n == 1 or stato["spareggio"] is not None:
+        return None
+    ladro = (stato["turno"] + 1) % n
+    x, y = stato["domanda"]
+    if rientra_nel_livello(x, y, stato["giocatori"][ladro]["livello"]):
+        return ladro
+    return None
+
+
+def _avanza(stato, eventi, rng):
+    n = len(stato["giocatori"])
+    stato["domande_fatte"] += 1
+    stato["turno"] = (stato["turno"] + 1) % n
+    _nuova_domanda(stato, rng)

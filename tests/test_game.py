@@ -61,3 +61,98 @@ def test_dopo_i_livelli_inizia_la_partita():
     assert game.chi_risponde(stato) == 0
     x, y = stato["domanda"]
     assert min(x, y) <= 8
+
+
+def risultato(stato):
+    x, y = stato["domanda"]
+    return x * y
+
+
+def test_risposta_giusta_un_punto_e_turno_successivo():
+    stato, rng, _ = configura([10, 10])
+    eventi = game.gestisci_numero(stato, risultato(stato), rng)
+    assert eventi == [{"tipo": "giusta", "giocatore": 0}]
+    assert stato["giocatori"][0]["punti"] == 1
+    assert stato["turno"] == 1
+    assert stato["fase"] == game.DOMANDA
+
+
+def test_risposta_sbagliata_meno_un_punto_e_furto():
+    stato, rng, _ = configura([10, 10])
+    eventi = game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    assert eventi == [{"tipo": "sbagliata", "giocatore": 0}]
+    assert stato["giocatori"][0]["punti"] == -1
+    assert stato["fase"] == game.FURTO
+    assert stato["ladro"] == 1
+    assert game.chi_risponde(stato) == 1
+
+
+def test_furto_riuscito():
+    stato, rng, _ = configura([10, 10, 10])
+    game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    eventi = game.gestisci_numero(stato, risultato(stato), rng)
+    assert eventi == [{"tipo": "giusta", "giocatore": 1}]
+    assert stato["giocatori"][1]["punti"] == 1
+    # il turno passa al giocatore dopo il proprietario della domanda
+    assert stato["turno"] == 1
+    assert stato["fase"] == game.DOMANDA
+    assert stato["domande_fatte"] == 1
+
+
+def test_furto_fallito_dice_la_soluzione():
+    stato, rng, _ = configura([10, 10])
+    x, y = stato["domanda"]
+    game.gestisci_numero(stato, x * y + 1, rng)
+    eventi = game.gestisci_numero(stato, x * y + 1, rng)
+    assert eventi[0] == {"tipo": "sbagliata", "giocatore": 1}
+    assert eventi[1] == {"tipo": "soluzione", "x": x, "y": y}
+    assert stato["giocatori"][1]["punti"] == -1
+    assert stato["turno"] == 1
+
+
+def test_furto_saltato_se_fuori_livello():
+    stato, rng, _ = configura([8, 5])
+    stato["domanda"] = [9, 8]
+    eventi = game.gestisci_numero(stato, 1, rng)
+    assert tipi(eventi) == ["sbagliata", "soluzione"]
+    assert stato["fase"] == game.DOMANDA
+    assert stato["turno"] == 1
+    assert stato["giocatori"][1]["punti"] == 0
+
+
+def test_furto_dall_ultimo_giocatore_va_al_primo():
+    stato, rng, _ = configura([10, 10])
+    game.gestisci_numero(stato, risultato(stato), rng)  # giocatore 1 giusto
+    game.gestisci_numero(stato, risultato(stato) + 1, rng)  # giocatore 2 sbaglia
+    assert stato["fase"] == game.FURTO
+    assert stato["ladro"] == 0
+
+
+def test_niente_furto_con_un_giocatore():
+    stato, rng, _ = configura([10])
+    eventi = game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    assert tipi(eventi) == ["sbagliata", "soluzione"]
+    assert stato["fase"] == game.DOMANDA
+
+
+def test_non_capito_prima_volta_senza_penalita():
+    stato, rng, _ = configura([10, 10])
+    domanda = stato["domanda"]
+    assert tipi(game.gestisci_numero(stato, None, rng)) == ["non_capito"]
+    assert stato["domanda"] == domanda
+    assert stato["giocatori"][0]["punti"] == 0
+
+
+def test_non_capito_due_volte_conta_sbagliata():
+    stato, rng, _ = configura([10, 10])
+    game.gestisci_numero(stato, None, rng)
+    eventi = game.gestisci_numero(stato, None, rng)
+    assert tipi(eventi) == ["sbagliata"]
+    assert stato["fase"] == game.FURTO
+
+
+def test_non_capito_si_azzera_per_il_ladro():
+    stato, rng, _ = configura([10, 10])
+    game.gestisci_numero(stato, None, rng)
+    game.gestisci_numero(stato, None, rng)  # sbagliata, furto
+    assert tipi(game.gestisci_numero(stato, None, rng)) == ["non_capito"]
