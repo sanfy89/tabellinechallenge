@@ -31,7 +31,8 @@ I giocatori sono identificati solo come "Giocatore 1", "Giocatore 2", ecc. (nien
 ### Punteggio
 - Risposta giusta: **+1**.
 - Risposta sbagliata: **−1**. Il punteggio può andare sotto zero.
-- Nessuna risposta: Alexa ripete la domanda una volta (reprompt). Se arriva una risposta non numerica o un secondo silenzio, conta come **sbagliata**.
+- Nessuna risposta: Alexa ripete la domanda una volta (reprompt). Se il silenzio continua, Alexa chiude la sessione (limite della piattaforma) e la partita è persa.
+- Risposta non capita: vedi "Gestione errori".
 
 ### Furto (domanda rubabile)
 Quando il giocatore di turno sbaglia:
