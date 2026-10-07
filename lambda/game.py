@@ -126,6 +126,35 @@ def _ladro_possibile(stato):
 
 def _avanza(stato, eventi, rng):
     n = len(stato["giocatori"])
-    stato["domande_fatte"] += 1
-    stato["turno"] = (stato["turno"] + 1) % n
+    if stato["spareggio"] is None:
+        stato["domande_fatte"] += 1
+        if stato["domande_fatte"] == DOMANDE_A_TESTA * n:
+            _fine_turni(stato, eventi, rng)
+            return
+        if n > 1 and stato["domande_fatte"] % n == 0:
+            eventi.append({"tipo": "riepilogo"})
+        stato["turno"] = (stato["turno"] + 1) % n
+    else:
+        stato["pos_spareggio"] += 1
+        if stato["pos_spareggio"] == len(stato["spareggio"]):
+            _fine_turni(stato, eventi, rng)
+            return
+        stato["turno"] = stato["spareggio"][stato["pos_spareggio"]]
+    _nuova_domanda(stato, rng)
+
+
+def _fine_turni(stato, eventi, rng):
+    """Fine dei turni regolari o di un giro di spareggio."""
+    gruppo = stato["spareggio"] or list(range(len(stato["giocatori"])))
+    massimo = max(stato["giocatori"][i]["punti"] for i in gruppo)
+    primi = [i for i in gruppo if stato["giocatori"][i]["punti"] == massimo]
+    if len(primi) == 1:
+        stato["fase"] = FINE
+        stato["domanda"] = None
+        eventi.append({"tipo": "fine", "vincitore": primi[0]})
+        return
+    stato["spareggio"] = primi
+    stato["pos_spareggio"] = 0
+    stato["turno"] = primi[0]
+    eventi.append({"tipo": "spareggio", "giocatori": primi})
     _nuova_domanda(stato, rng)

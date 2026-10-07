@@ -156,3 +156,84 @@ def test_non_capito_si_azzera_per_il_ladro():
     game.gestisci_numero(stato, None, rng)
     game.gestisci_numero(stato, None, rng)  # sbagliata, furto
     assert tipi(game.gestisci_numero(stato, None, rng)) == ["non_capito"]
+
+
+def gioca(stato, rng, indovina):
+    """Risponde finché la partita non finisce.
+
+    indovina(giocatore) -> bool decide se il giocatore risponde giusto.
+    Restituisce tutti gli eventi prodotti.
+    """
+    tutti = []
+    for _ in range(500):
+        if stato["fase"] == game.FINE:
+            break
+        chi = game.chi_risponde(stato)
+        numero = risultato(stato) if indovina(chi) else risultato(stato) + 1
+        tutti += game.gestisci_numero(stato, numero, rng)
+    return tutti
+
+
+def test_riepilogo_a_fine_giro():
+    stato, rng, _ = configura([10, 10])
+    assert tipi(game.gestisci_numero(stato, risultato(stato), rng)) == ["giusta"]
+    eventi = game.gestisci_numero(stato, risultato(stato), rng)
+    assert tipi(eventi) == ["giusta", "riepilogo"]
+
+
+def test_niente_riepilogo_con_un_giocatore():
+    stato, rng, _ = configura([10])
+    eventi = gioca(stato, rng, lambda chi: True)
+    assert "riepilogo" not in tipi(eventi)
+
+
+def test_partita_da_solo_finisce_dopo_cinque_domande():
+    stato, rng, _ = configura([10])
+    eventi = gioca(stato, rng, lambda chi: True)
+    assert tipi(eventi).count("giusta") == 5
+    assert eventi[-1] == {"tipo": "fine", "vincitore": 0}
+    assert stato["fase"] == game.FINE
+    assert stato["domanda"] is None
+
+
+def test_vincitore_con_due_giocatori():
+    stato, rng, _ = configura([10, 10])
+    eventi = gioca(stato, rng, lambda chi: chi == 0)
+    assert eventi[-1] == {"tipo": "fine", "vincitore": 0}
+    assert stato["domande_fatte"] == 10
+    assert "spareggio" not in tipi(eventi)
+
+
+def test_spareggio_tra_pari_senza_furto():
+    stato, rng, _ = configura([10, 10, 10])
+    for _ in range(15):
+        eventi = game.gestisci_numero(stato, risultato(stato), rng)
+    assert eventi[-1] == {"tipo": "spareggio", "giocatori": [0, 1, 2]}
+    assert stato["fase"] == game.DOMANDA
+    assert stato["turno"] == 0
+    # nello spareggio chi sbaglia non subisce furti
+    eventi = game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    assert tipi(eventi) == ["sbagliata", "soluzione"]
+    assert stato["turno"] == 1
+
+
+def test_spareggio_si_ripete_finche_resta_uno():
+    stato, rng, _ = configura([10, 10, 10])
+    for _ in range(15):
+        game.gestisci_numero(stato, risultato(stato), rng)
+    # spareggio 1: giocatori 1 e 2 giusti, giocatore 3 sbaglia
+    game.gestisci_numero(stato, risultato(stato), rng)
+    game.gestisci_numero(stato, risultato(stato), rng)
+    eventi = game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    assert eventi[-1] == {"tipo": "spareggio", "giocatori": [0, 1]}
+    # spareggio 2: vince il giocatore 2
+    game.gestisci_numero(stato, risultato(stato) + 1, rng)
+    eventi = game.gestisci_numero(stato, risultato(stato), rng)
+    assert eventi[-1] == {"tipo": "fine", "vincitore": 1}
+    assert stato["fase"] == game.FINE
+
+
+def test_fine_ignora_altri_numeri():
+    stato, rng, _ = configura([10])
+    gioca(stato, rng, lambda chi: True)
+    assert game.gestisci_numero(stato, 42, rng) == []
