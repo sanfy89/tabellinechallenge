@@ -1,0 +1,44 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "tabelline challenge",
+      "intents": [
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": ["aiuto", "come si gioca", "quali sono le regole"] },
+        { "name": "AMAZON.StopIntent", "samples": ["basta", "smettiamo", "fine partita"] },
+        { "name": "AMAZON.NavigateHomeIntent", "samples": [] },
+        { "name": "AMAZON.FallbackIntent", "samples": [] },
+        {
+          "name": "NumeroIntent",
+          "slots": [{ "name": "numero", "type": "AMAZON.NUMBER" }],
+          "samples": [
+            "{numero}",
+            "fa {numero}",
+            "è {numero}",
+            "il risultato è {numero}",
+            "siamo {numero}",
+            "siamo in {numero}",
+            "giochiamo in {numero}",
+            "fino al {numero}",
+            "fino alla {numero}",
+            "fino alla tabellina del {numero}",
+            "la tabellina del {numero}",
+            "conosco fino al {numero}",
+            "conosco fino alla tabellina del {numero}"
+          ]
+        },
+        {
+          "name": "RipetiIntent",
+          "slots": [],
+          "samples": ["ripeti", "puoi ripetere", "ripeti la domanda", "non ho sentito"]
+        },
+        {
+          "name": "PunteggioIntent",
+          "slots": [],
+          "samples": ["punteggio", "punteggi", "classifica", "quanti punti abbiamo", "quanti punti ho"]
+        }
+      ],
+      "types": []
+    }
+  }
+}
